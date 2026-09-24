@@ -1,0 +1,36 @@
+services:
+
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    ports:
+      - "8080:8080"
+    depends_on:
+      - product-api
+    networks:
+      - observability
+
+  product-api:
+    build: ./product-api
+    container_name: product-api
+    ports:
+      - "5000:5000"
+    environment:
+      ORDER_SERVICE_URL: http://order-service:5001
+    depends_on:
+      - order-service
+    networks:
+      - observability
+
+  order-service:
+    build: ./order-service
+    container_name: order-service
+    ports:
+      - "5001:5001"
+    networks:
+      - observability
+
+
+networks:
+  observability:
+    driver: bridge
