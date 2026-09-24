@@ -103,18 +103,18 @@ The goal is to understand the **complete observability lifecycle** — from an a
 ```mermaid
 flowchart TD
 
-    User[Customer Browser]
+    User["Customer Browser"]
 
-    Frontend[Frontend<br/>Flask :8080]
-    ProductAPI[Product API<br/>Flask :5000]
-    OrderService[Order Service<br/>Flask :5001]
+    Frontend["Frontend<br/>Flask Port 8080"]
+    ProductAPI["Product API<br/>Flask Port 5000"]
+    OrderService["Order Service<br/>Flask Port 5001"]
 
-    Prometheus[Prometheus]
-    Loki[Loki]
-    Tempo[Tempo]
-    Alloy[Grafana Alloy]
-    Grafana[Grafana]
-    OTel[OpenTelemetry]
+    Prometheus["Prometheus"]
+    Loki["Loki"]
+    Tempo["Tempo"]
+    Alloy["Grafana Alloy"]
+    Grafana["Grafana"]
+    OTel["OpenTelemetry"]
 
     User --> Frontend
     Frontend --> ProductAPI
