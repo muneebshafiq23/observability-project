@@ -1,0 +1,36 @@
+x-svc: &svc
+  build: ./services
+  restart: unless-stopped
+  environment: &env
+    OTEL_EXPORTER_OTLP_ENDPOINT: http://alloy:4318
+  depends_on: [alloy]
+
+services:
+  frontend:
+    <<: *svc
+    command: gunicorn -w 1 --threads 8 -b 0.0.0.0:8000 frontend:app
+    environment: {<<: *env, SERVICE_NAME: frontend}
+    ports: ["80:8000"]
+  order-service:
+    <<: *svc
+    command: gunicorn -w 1 --threads 8 -b 0.0.0.0:8000 order:app
+    environment: {<<: *env, SERVICE_NAME: order-service}
+  inventory-service:
+    <<: *svc
+    command: gunicorn -w 1 --threads 8 -b 0.0.0.0:8000 inventory:app
+    environment: {<<: *env, SERVICE_NAME: inventory-service}
+  payment-service:
+    <<: *svc
+    command: gunicorn -w 1 --threads 8 -b 0.0.0.0:8000 payment:app
+    environment: {<<: *env, SERVICE_NAME: payment-service}
+
+  alloy:
+    image: grafana/alloy:v1.4.2
+    restart: unless-stopped
+    command: run --server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
+    environment:
+      SERVER2_IP: ${SERVER2_IP}
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports: ["12345:12345"]

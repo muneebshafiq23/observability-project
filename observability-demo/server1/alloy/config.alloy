@@ -1,0 +1,60 @@
+// ---------- METRICS: scrape app services -> Prometheus on server2 ----------
+prometheus.scrape "apps" {
+  targets = [
+    {"__address__" = "frontend:8000",          "service" = "frontend"},
+    {"__address__" = "order-service:8000",     "service" = "order-service"},
+    {"__address__" = "inventory-service:8000", "service" = "inventory-service"},
+    {"__address__" = "payment-service:8000",   "service" = "payment-service"},
+  ]
+  scrape_interval = "15s"
+  forward_to      = [prometheus.remote_write.server2.receiver]
+}
+
+prometheus.remote_write "server2" {
+  endpoint {
+    url = "http://" + sys.env("SERVER2_IP") + ":9090/api/v1/write"
+  }
+}
+
+// ---------- LOGS: docker container logs -> Loki on server2 ----------
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+discovery.relabel "logs" {
+  targets = discovery.docker.containers.targets
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
+}
+
+loki.source.docker "containers" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.relabel.logs.output
+  forward_to = [loki.write.server2.receiver]
+}
+
+loki.write "server2" {
+  endpoint {
+    url = "http://" + sys.env("SERVER2_IP") + ":3100/loki/api/v1/push"
+  }
+}
+
+// ---------- TRACES: OTLP from apps -> Tempo on server2 ----------
+otelcol.receiver.otlp "default" {
+  grpc { endpoint = "0.0.0.0:4317" }
+  http { endpoint = "0.0.0.0:4318" }
+  output { traces = [otelcol.processor.batch.default.input] }
+}
+
+otelcol.processor.batch "default" {
+  output { traces = [otelcol.exporter.otlp.tempo.input] }
+}
+
+otelcol.exporter.otlp "tempo" {
+  client {
+    endpoint = sys.env("SERVER2_IP") + ":4317"
+    tls { insecure = true }
+  }
+}
